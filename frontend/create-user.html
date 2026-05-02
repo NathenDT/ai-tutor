@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Create User - AI Tutor</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body class="login-page">
+    <main class="login-shell">
+      <section class="login-card" aria-labelledby="create-user-title">
+        <div class="login-heading">
+          <p class="eyebrow">AI Tutor</p>
+          <h1 id="create-user-title">Create user</h1>
+        </div>
+
+        <form id="create-user-form" class="login-form">
+          <label for="username">Username</label>
+          <input
+            id="username"
+            name="username"
+            type="text"
+            autocomplete="username"
+            required
+          />
+
+          <label for="password">Password</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            autocomplete="new-password"
+            required
+          />
+
+          <label for="confirm-password">Confirm password</label>
+          <input
+            id="confirm-password"
+            name="confirm-password"
+            type="password"
+            autocomplete="new-password"
+            required
+          />
+
+          <p id="create-user-error" class="form-error hidden" role="alert"></p>
+          <button id="create-user-submit" class="btn" type="submit">
+            Create User
+          </button>
+        </form>
+
+        <p class="auth-link">
+          Already have an account?
+          <a href="/">Log in</a>
+        </p>
+      </section>
+    </main>
+
+    <script src="/static/create-user.js"></script>
+  </body>
+</html>
