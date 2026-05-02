@@ -10,7 +10,7 @@ async function redirectIfAuthenticated() {
     const response = await fetch("/auth/me");
     const result = await response.json();
     if (result.authenticated) {
-      window.location.href = "/tutor";
+      window.location.href = "/home";
     }
   } catch (error) {
     console.error("Could not check auth state:", error);
@@ -57,7 +57,7 @@ createUserForm.addEventListener("submit", async (event) => {
       return;
     }
 
-    window.location.href = "/tutor";
+    window.location.href = "/home";
   } catch (error) {
     console.error("Create user error:", error);
     showCreateUserError("Could not reach the server.");

@@ -85,10 +85,17 @@ async def tutor(request: Request):
     return FileResponse(BASE_DIR / "frontend" / "tutor.html")
 
 
+@app.get("/home")
+async def home(request: Request):
+    if not authenticated_request(request):
+        return RedirectResponse(url="/", status_code=303)
+    return FileResponse(BASE_DIR / "frontend" / "home.html")
+
+
 @app.get("/create-user")
 async def create_user_page(request: Request):
     if authenticated_request(request):
-        return RedirectResponse(url="/tutor", status_code=303)
+        return RedirectResponse(url="/home", status_code=303)
     return FileResponse(BASE_DIR / "frontend" / "create-user.html")
 
 
