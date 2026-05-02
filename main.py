@@ -18,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from gemini_live import GeminiLive
+from streaks import StreakService
 from twilio_handler import TwilioHandler
 
 # Load environment variables
@@ -34,6 +35,7 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     initialize_auth_database()
+    streak_service.initialize()
     yield
 
 # Configuration
@@ -52,6 +54,7 @@ AUTH_BOOTSTRAP_PASSWORD = os.getenv("AUTH_BOOTSTRAP_PASSWORD") or os.getenv("AUT
 AUTH_COOKIE_NAME = "ai_tutor_session"
 AUTH_SESSION_MAX_AGE_SECONDS = 60 * 60 * 12
 PASSWORD_HASH_ITERATIONS = 210_000
+streak_service = StreakService(AUTH_DATABASE_PATH)
 
 # Twilio config (optional — only needed for phone call integration)
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
@@ -91,6 +94,12 @@ async def home(request: Request):
         return RedirectResponse(url="/", status_code=303)
     return FileResponse(BASE_DIR / "frontend" / "home.html")
 
+@app.get("/settings")
+async def settings(request: Request):
+    if not authenticated_request(request):
+        return RedirectResponse(url="/", status_code=303)
+    return FileResponse(BASE_DIR / "frontend" / "settings.html")
+
 
 @app.get("/create-user")
 async def create_user_page(request: Request):
@@ -102,6 +111,14 @@ async def create_user_page(request: Request):
 @app.get("/auth/me")
 async def auth_me(request: Request):
     return {"authenticated": authenticated_request(request)}
+
+
+@app.get("/api/streak")
+async def get_current_streak(request: Request):
+    username = get_request_username(request)
+    if not username:
+        return JSONResponse({"error": "Not authenticated."}, status_code=401)
+    return streak_service.get_streak(username)
 
 
 @app.post("/auth/login")
@@ -123,6 +140,7 @@ async def auth_login(request: Request):
     if not user or not verify_password(password, user["password_hash"]):
         return JSONResponse({"error": "Invalid username or password."}, status_code=401)
 
+    streak = streak_service.record_login(username)
     response = JSONResponse({"authenticated": True})
     response.set_cookie(
         AUTH_COOKIE_NAME,
@@ -132,6 +150,7 @@ async def auth_login(request: Request):
         path="/",
         samesite="lax",
     )
+    response.headers["X-Current-Streak"] = str(streak["current_streak"])
     return response
 
 
@@ -159,6 +178,7 @@ async def auth_register(request: Request):
     except sqlite3.IntegrityError:
         return JSONResponse({"error": "That username is already taken."}, status_code=409)
 
+    streak = streak_service.record_login(username)
     response = JSONResponse({"authenticated": True})
     response.set_cookie(
         AUTH_COOKIE_NAME,
@@ -168,6 +188,7 @@ async def auth_register(request: Request):
         path="/",
         samesite="lax",
     )
+    response.headers["X-Current-Streak"] = str(streak["current_streak"])
     return response
 
 
@@ -364,6 +385,11 @@ def get_authenticated_user(token):
 def authenticated_request(request: Request):
     token = request.cookies.get(AUTH_COOKIE_NAME)
     return get_authenticated_user(token) is not None
+
+
+def get_request_username(request: Request):
+    token = request.cookies.get(AUTH_COOKIE_NAME)
+    return get_authenticated_user(token)
 
 
 def authenticated_websocket(websocket: WebSocket):

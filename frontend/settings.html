@@ -4,32 +4,40 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Settings</title>
-    <link href="css/style.css" rel="stylesheet">
+    <link href="/static/style.css" rel="stylesheet">
 </head>
 
-<body>
+    <body>
 
-    <header>
-        <h1>Settings</h1>
-    </header>
+        <header>
+            <h1>Settings</h1>
+        </header>
 
-    <main>
-        <h2>Account</h2>
-        <label>Username</label>
-        <input type="text" placeholder="Enter username" /><br/><br/>
+        <main>
+            <h2>Account</h2>
+            <label>Username</label>
+            <input type="text" placeholder="username" /><br/><br/>
 
-        <label>Email</label>
-        <input type="email" placeholder="Enter email" /><br/><br/>
+            <label>Email</label>
+            <input type="email" placeholder="email" /><br/><br/>
 
-        <h2>Preferences</h2>
-        <label>Dark Mode</label>
+            <label>Password</label>
+            <input type="password" placeholder="password" /><br/><br/>
 
-        <button>Save Changes</button>
-    </main>
+            <label>Phone Number (Optional)</label>
+            <input type="tel" placeholder="phone number" /><br/><br/>
 
-    <footer>
-        <p>© 2025 Maxwell Whitmarsh, Brendon Wong, Nathen dela Torre, Jonathan Lee, Brendon Wong</p>
-    </footer>
+            <h2>Preferences</h2>
+            <label>Dark Mode</label>
+            <input type="checkbox" /><br/><br/>
 
-</body>
+            <a href="/home" class="btn">Back</a>
+            <a href="/home" class="btn">Save Changes</a>
+        </main>
+
+        <footer>
+            <p>© 2025 Maxwell Whitmarsh, Brendon Wong, Nathen dela Torre, Jonathan Lee, Brendon Wong</p>
+        </footer>
+
+    </body>
 </html>

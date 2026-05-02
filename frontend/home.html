@@ -4,27 +4,43 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home</title>
-    <link href="css/style.css" rel="stylesheet">
+    <link href="/static/style.css" rel="stylesheet">
 </head>
 
 <body>
 
     <header>
-        <h1>AI Tutor</h1>
-        <h2>AI Tutor Dashboard</h2>
+        <div class="header-left">
+            <h1>AI Tutor</h1>
+            <h2>AI Tutor Dashboard</h2>
+        </div>
     </header>
 
-    <nav>
-            <a href="home.html">Home</a>
-            <a href="/tutor">Tutor</a>
-            <a href="settings.html">Settings</a>
-    </nav>
+    <main>
+        <div class="streak-container">
+            <div class="streak-badge">
+                <span class="streak-icon">🔥</span>
+                <div class="streak-info">
+                    <p class="streak-label">Current Streak</p>
+                    <p id="current-streak" class="streak-number">0</p>
+                    <p id="longest-streak" class="streak-detail">Best: 0</p>
+                </div>
+            </div>
+        </div>
 
-
+    <div>
+        <nav>
+            <a href="/home" class="btn">Home</a>
+            <a href="/tutor" class="btn">Tutor</a>
+            <a href="/settings" class="btn">Settings</a>
+        </nav>
+    </div>
+    </main>
 
     <footer>
-        <p>© 2025 Maxwell Whitmarsh, Brendon Wong, Nathen dela Torre, Jonathan Lee, Brendon Wong</p>
+        <p>© 2025 Maxwell Whitmarsh, Brendon Wong, Nathen dela Torre, Jonathan Lee.</p>
     </footer>
 
+    <script src="/static/home.js"></script>
 </body>
 </html>
