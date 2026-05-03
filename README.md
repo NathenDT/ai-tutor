@@ -72,7 +72,7 @@ After logging in, the tutor is available at:
 │   └── gemini_live.py  # Gemini Live API wrapper using Gen AI SDK
 ├── requirements.txt    # Python dependencies
 └── frontend/
-    ├── index.html      # Login page
+    ├── login.html      # Login page
     ├── create-user.html # Create user page
     ├── tutor.html      # Tutor interface
     ├── css/

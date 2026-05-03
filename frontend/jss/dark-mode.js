@@ -1,5 +1,5 @@
 (function () {
-  const STORAGE_KEY = "darkMode";
+  const STORAGE_KEY = "dark-mode";
   const root = document.documentElement;
 
   function readStoredPreference() {

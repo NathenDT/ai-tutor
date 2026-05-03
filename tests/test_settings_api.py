@@ -94,6 +94,40 @@ class SettingsApiTest(unittest.TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response.json(), {"authenticated": True})
 
+    def test_store_purchase_spends_coins_and_marks_item_owned(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            database_path = Path(temp_dir) / "auth.db"
+            with patch.object(main, "AUTH_DATABASE_PATH", database_path), patch.object(
+                main, "AUTH_SESSION_SECRET", "test-session-secret"
+            ), patch.object(main.coin_service, "database_path", database_path):
+                main.initialize_auth_database()
+                main.create_user("student", "password")
+                main.coin_service.award_correct_answer("student", multiplier=10)
+                token = main.create_session_token("student")
+                client = TestClient(main.app)
+                client.cookies.set(main.AUTH_COOKIE_NAME, token)
+
+                response = client.get("/api/store")
+
+                self.assertEqual(response.status_code, 200)
+                store = response.json()
+                self.assertEqual(store["balance"], 10)
+                self.assertTrue(any(item["emoji"] == "🐱" for item in store["items"]))
+
+                response = client.post("/api/store/purchase", json={"item_id": "cat"})
+
+                self.assertEqual(response.status_code, 200)
+                purchase = response.json()
+                self.assertEqual(purchase["balance"], 5)
+                self.assertEqual(purchase["item"]["emoji"], "🐱")
+                self.assertTrue(purchase["item"]["owned"])
+
+                response = client.get("/api/store")
+
+                self.assertEqual(response.status_code, 200)
+                cat = next(item for item in response.json()["items"] if item["id"] == "cat")
+                self.assertTrue(cat["owned"])
+
 
 class FakeCanvasResponse:
     def __init__(self, status_code, payload, links=None, content=b""):

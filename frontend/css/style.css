@@ -1104,16 +1104,103 @@ select:hover {
 }
 
 .store-card {
-  min-height: 280px;
-  justify-content: center;
-  align-items: flex-start;
-  background: linear-gradient(135deg, var(--surface-color), var(--surface-muted));
+  background: var(--surface-color);
 }
 
 .store-card p {
   max-width: 680px;
   margin: 0;
   color: var(--text-secondary);
+}
+
+.store-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.store-heading h2 {
+  margin-bottom: 6px;
+}
+
+.store-balance {
+  min-width: 132px;
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--accent-hover);
+  text-align: right;
+}
+
+.store-balance span {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.store-balance strong {
+  font-size: 1.7rem;
+  line-height: 1;
+}
+
+.store-status {
+  font-weight: 850;
+}
+
+.store-status.connected {
+  color: var(--success-color);
+}
+
+.store-status.disconnected {
+  color: var(--danger-color);
+}
+
+.store-status.empty {
+  color: var(--text-secondary);
+}
+
+.store-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+}
+
+.animal-store-item {
+  display: grid;
+  gap: 10px;
+  min-height: 210px;
+  padding: 18px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--surface-muted);
+}
+
+.animal-store-item.owned {
+  border-color: color-mix(in srgb, var(--success-color) 42%, var(--border-color));
+  background: color-mix(in srgb, var(--success-soft) 44%, var(--surface-muted));
+}
+
+.animal-emoji {
+  width: 68px;
+  height: 68px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  background: var(--surface-color);
+  font-size: 2.4rem;
+}
+
+.animal-store-item h3 {
+  margin: 0;
+}
+
+.animal-price {
+  font-weight: 850;
 }
 
 .status {

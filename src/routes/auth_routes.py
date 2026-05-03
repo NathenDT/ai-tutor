@@ -47,6 +47,37 @@ async def get_current_coins(request: Request):
     return coins
 
 
+@router.get("/api/store")
+async def get_store_items(request: Request):
+    username = get_request_username(request)
+    if not username:
+        return JSONResponse({"error": "Not authenticated."}, status_code=401)
+
+    return coin_service.get_store(username)
+
+
+@router.post("/api/store/purchase")
+async def purchase_store_item(request: Request):
+    username = get_request_username(request)
+    if not username:
+        return JSONResponse({"error": "Not authenticated."}, status_code=401)
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse({"error": "Invalid purchase request."}, status_code=400)
+
+    item_id = str(payload.get("item_id") or "").strip()
+    result = coin_service.purchase_store_item(username, item_id)
+    if not result.get("ok"):
+        return JSONResponse(
+            {"error": result.get("error", "Could not purchase item."), **result},
+            status_code=int(result.get("status_code") or 400),
+        )
+
+    return result
+
+
 @router.post("/api/auth/login")
 @router.post("/auth/login")
 async def auth_login(request: Request):

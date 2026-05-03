@@ -35,6 +35,19 @@ class FrontendAssignmentFlowTest(unittest.TestCase):
         self.assertIn('class="btn upload-tutor-action"', upload_html)
         self.assertNotIn("tutorLink", upload_js)
 
+    def test_store_page_sells_animal_emoji_for_coins(self):
+        store_html = (BASE_DIR / "frontend" / "store-page.html").read_text(
+            encoding="utf-8"
+        )
+        store_js = (BASE_DIR / "frontend" / "jss" / "store.js").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("Animal Emoji Shop", store_html)
+        self.assertIn('id="store-items"', store_html)
+        self.assertIn("/api/store/purchase", store_js)
+        self.assertIn("item.emoji", store_js)
+
     def test_tutor_page_has_assignment_selector(self):
         tutor_html = (BASE_DIR / "frontend" / "tutor.html").read_text(encoding="utf-8")
 

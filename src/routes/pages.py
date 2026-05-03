@@ -9,7 +9,7 @@ router = APIRouter()
 
 @router.get("/")
 async def root():
-    return FileResponse(FRONTEND_DIR / "index.html")
+    return FileResponse(FRONTEND_DIR / "login.html")
 
 
 @router.get("/tutor")
@@ -41,10 +41,10 @@ async def settings_page(request: Request):
 
 
 @router.get("/store")
-async def storepage(request: Request):
+async def store_page(request: Request):
     if not authenticated_request(request):
         return RedirectResponse(url="/", status_code=303)
-    return FileResponse(FRONTEND_DIR / "storepage.html")
+    return FileResponse(FRONTEND_DIR / "store-page.html")
 
 
 @router.get("/upload-content")

@@ -4,14 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Minerva</title>
-    <script>
-      try {
-        document.documentElement.dataset.theme =
-          localStorage.getItem("darkMode") === "true" ? "dark" : "light";
-      } catch (error) {
-        document.documentElement.dataset.theme = "light";
-      }
-    </script>
     <link rel="stylesheet" href="/static/css/style.css" />
   </head>
   <body class="app-page">
@@ -159,12 +151,15 @@
             </aside>
           </div>
         </div>
+      <footer class="footer">
+        <p>© 2026 Maxwell Whitmarsh, Brendon Wong, Nathen dela Torre, Jonathan Lee, Brendon Wong</p>
+      </footer>
       </main>
     </div>
     <script src="/static/jss/media-handler.js"></script>
     <script src="/static/jss/gemini-client.js"></script>
     <script src="/static/jss/home.js"></script>
     <script src="/static/jss/main.js"></script>
-    <script src="/static/jss/darkmode.js"></script>
+    <script src="/static/jss/dark-mode.js"></script>
   </body>
 </html>
