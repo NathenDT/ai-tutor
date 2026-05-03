@@ -15,6 +15,7 @@
         <a href="/tutor">Tutor</a>
         <a href="/upload-content">Upload Content</a>
         <a href="/settings" aria-current="page">Settings</a>
+        <button id="logoutBtn" class="btn secondary" type="button">Log Out</button>
       </nav>
     </header>
 
@@ -34,7 +35,7 @@
 
       <h2>Preferences</h2>
       <label>Dark Mode</label>
-      <input type="checkbox" /><br /><br />
+      <input type="checkbox" id="darkToggle" /><br /><br />
 
       <a href="/home" class="btn">Back</a>
       <a href="/home" class="btn">Save Changes</a>
@@ -42,9 +43,24 @@
 
     <footer>
       <p>
-        © 2025 Maxwell Whitmarsh, Brendon Wong, Nathen dela Torre, Jonathan Lee,
-        Brendon Wong
+        © 2025 Maxwell Whitmarsh, Brendon Wong, Nathen dela Torre, Jonathan Lee.
       </p>
     </footer>
+    <script src="/static/logout.js"></script>
+
+    <script>
+
+       const toggle = document.getElementById("darkToggle");
+
+       toggle.checked = localStorage.getItem("darkMode") === "true";
+        document.body.classList.toggle("dark", toggle.checked);
+        
+        toggle.addEventListener("change", () => {
+        document.body.classList.toggle("dark", toggle.checked);
+        localStorage.setItem("darkMode", toggle.checked);
+
+    });
+    </script>
+
   </body>
 </html>

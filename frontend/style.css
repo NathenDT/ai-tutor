@@ -596,12 +596,36 @@ input[type="file"] {
   background: var(--surface-color);
 }
 
+.content-card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 28px;
+  background: var(--surface-color);
+}
+
 .upload-heading h2 {
   margin: 0 0 8px;
 }
 
 .upload-heading p {
   margin: 0 0 24px;
+  color: var(--text-secondary);
+}
+
+.content-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 22px;
+}
+
+.content-heading h2 {
+  margin: 0 0 8px;
+}
+
+.content-heading p {
+  margin: 0;
   color: var(--text-secondary);
 }
 
@@ -660,6 +684,64 @@ input[type="file"] {
   overflow-wrap: anywhere;
 }
 
+.content-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.content-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-color);
+}
+
+.content-item-details {
+  min-width: 0;
+}
+
+.content-item h3 {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+}
+
+.content-meta {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 12px;
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.content-meta dt {
+  font-weight: 700;
+}
+
+.content-meta dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.content-empty {
+  margin: 0;
+  padding: 18px;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  background: var(--bg-color);
+}
+
+.content-delete {
+  flex: 0 0 auto;
+}
+
 @media (max-width: 768px) {
   header {
     align-items: flex-start;
@@ -671,6 +753,15 @@ input[type="file"] {
   }
 
   .upload-result {
+    grid-template-columns: 1fr;
+  }
+
+  .content-heading,
+  .content-item {
+    flex-direction: column;
+  }
+
+  .content-meta {
     grid-template-columns: 1fr;
   }
 }
@@ -1043,6 +1134,7 @@ input[type="password"] {
   align-items: center;
   gap: 12px;
   background: linear-gradient(135deg, #fff44f 0%, #ffb74d 100%);
+
   padding: 12px 20px;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(255, 179, 77, 0.3);
@@ -1097,6 +1189,30 @@ input[type="password"] {
   }
   20%, 24%, 55% {
     opacity: 0.8;
+
+body.dark {
+    background-color: #1a1a1a;
+    color: #f0f0f0;
+}
+
+body.dark header,
+body.dark footer,
+body.dark nav {
+    background-color: #2a2a2a;
+    border-color: #444;
+}
+
+body.dark .use-case-card {
+    background-color: #2a2a2a;
+    border-color: #444;
+}
+
+body.dark input {
+    background-color: #333;
+    color: #f0f0f0;
+    border-color: #555;
+}
+
   }
 }
 

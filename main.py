@@ -31,6 +31,7 @@ from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Resp
 from fastapi.staticfiles import StaticFiles
 from google.genai import types
 from gemini_live import GeminiLive
+from safegaurd import SafeGaurd
 from streaks import StreakService
 from tutor_agent import (
     CoursePassage,
@@ -75,6 +76,7 @@ AUTH_COOKIE_NAME = "ai_tutor_session"
 AUTH_SESSION_MAX_AGE_SECONDS = 60 * 60 * 12
 PASSWORD_HASH_ITERATIONS = 210_000
 streak_service = StreakService(AUTH_DATABASE_PATH)
+safegaurd = SafeGaurd()
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "").strip()
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "ai-tutor-content").strip()
@@ -92,6 +94,7 @@ CONTENT_MAX_UPLOAD_BYTES = CONTENT_MAX_UPLOAD_MB * 1024 * 1024
 CONTENT_CHUNK_WORDS = 450
 CONTENT_CHUNK_OVERLAP_WORDS = 50
 PINECONE_UPSERT_BATCH_SIZE = 96
+CONTENT_METADATA_SUFFIX = ".json"
 
 CURRICULUM_PROGRESS_TOOL_NAME = "mark_curriculum_step_complete"
 
@@ -223,6 +226,15 @@ async def upload_pdf_content(request: Request, file: UploadFile = File(...)):
             status_code=400,
         )
 
+    write_content_metadata(
+        document_id=document_id,
+        filename=original_filename,
+        username=username,
+        saved_path=saved_path,
+        chunk_count=len(records),
+        status="saved",
+    )
+
     try:
         await asyncio.to_thread(upsert_records_to_pinecone, records, username)
     except Exception as error:
@@ -237,6 +249,15 @@ async def upload_pdf_content(request: Request, file: UploadFile = File(...)):
             status_code=502,
         )
 
+    write_content_metadata(
+        document_id=document_id,
+        filename=original_filename,
+        username=username,
+        saved_path=saved_path,
+        chunk_count=len(records),
+        status="indexed",
+    )
+
     return {
         "filename": original_filename,
         "documentId": document_id,
@@ -245,6 +266,72 @@ async def upload_pdf_content(request: Request, file: UploadFile = File(...)):
         "namespace": username,
         "indexName": PINECONE_INDEX_NAME,
     }
+
+
+@app.get("/api/content")
+async def list_uploaded_content(request: Request):
+    username = get_authenticated_request_user(request)
+    if not username:
+        return JSONResponse({"error": "Authentication required."}, status_code=401)
+
+    return {"items": list_content_items(username)}
+
+
+@app.delete("/api/content/{document_id}")
+async def delete_uploaded_content(document_id: str, request: Request):
+    username = get_authenticated_request_user(request)
+    if not username:
+        return JSONResponse({"error": "Authentication required."}, status_code=401)
+
+    if not valid_document_id(document_id):
+        return JSONResponse({"error": "Invalid document id."}, status_code=400)
+
+    content_item = find_content_item(document_id)
+    if not content_item:
+        return JSONResponse({"error": "Content was not found."}, status_code=404)
+
+    item_namespace = content_item.get("namespace")
+    if item_namespace and item_namespace != username:
+        return JSONResponse(
+            {"error": "You can only delete your own content."},
+            status_code=403,
+        )
+
+    pinecone_warning = ""
+    if PINECONE_API_KEY:
+        try:
+            await asyncio.to_thread(
+                delete_document_from_pinecone,
+                document_id,
+                item_namespace or username,
+            )
+        except Exception as error:
+            if pinecone_namespace_not_found(error):
+                pinecone_warning = (
+                    "Pinecone namespace was not found, so only the local PDF was deleted."
+                )
+            else:
+                logger.exception("Pinecone delete failed for document %s", document_id)
+                return JSONResponse(
+                    {"error": f"Could not delete content from Pinecone: {error}"},
+                    status_code=502,
+                )
+    else:
+        pinecone_warning = "PINECONE_API_KEY is not set, so only the local PDF was deleted."
+
+    delete_local_content_files(content_item)
+    response = {
+        "deleted": True,
+        "documentId": document_id,
+    }
+    if pinecone_warning:
+        response["warning"] = pinecone_warning
+    return response
+
+
+def pinecone_namespace_not_found(error):
+    error_text = str(error).lower()
+    return "namespace not found" in error_text
 
 
 @app.get("/auth/me")
@@ -453,6 +540,106 @@ def save_uploaded_pdf(document_id, filename, content):
     return saved_path
 
 
+def valid_document_id(document_id):
+    return bool(re.fullmatch(r"[a-f0-9]{32}", document_id or ""))
+
+
+def get_content_metadata_path(saved_path):
+    return saved_path.with_name(f"{saved_path.name}{CONTENT_METADATA_SUFFIX}")
+
+
+def write_content_metadata(document_id, filename, username, saved_path, chunk_count, status):
+    metadata = {
+        "documentId": document_id,
+        "filename": filename,
+        "namespace": username,
+        "savedPath": str(saved_path),
+        "chunkCount": chunk_count,
+        "indexName": PINECONE_INDEX_NAME,
+        "status": status,
+        "uploadedAt": datetime.now(timezone.utc).isoformat(),
+        "sizeBytes": saved_path.stat().st_size if saved_path.exists() else 0,
+    }
+    get_content_metadata_path(saved_path).write_text(
+        json.dumps(metadata, indent=2),
+        encoding="utf-8",
+    )
+
+
+def list_content_items(username):
+    CONTENT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    items = []
+    uploaded_pdfs = sorted(
+        CONTENT_UPLOAD_DIR.glob("*.pdf"),
+        key=lambda path: path.stat().st_mtime,
+        reverse=True,
+    )
+    for saved_path in uploaded_pdfs:
+        item = build_content_item(saved_path)
+        if not item:
+            continue
+        namespace = item.get("namespace")
+        if namespace and namespace != username:
+            continue
+        items.append(item)
+    return items
+
+
+def find_content_item(document_id):
+    CONTENT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    for saved_path in CONTENT_UPLOAD_DIR.glob(f"{document_id}-*.pdf"):
+        return build_content_item(saved_path)
+    return None
+
+
+def build_content_item(saved_path):
+    document_id = saved_path.name.split("-", 1)[0]
+    if not valid_document_id(document_id):
+        return None
+
+    metadata = read_content_metadata(saved_path)
+    stat = saved_path.stat()
+    filename = metadata.get("filename") or saved_path.name.split("-", 1)[1]
+    uploaded_at = metadata.get("uploadedAt") or datetime.fromtimestamp(
+        stat.st_mtime,
+        timezone.utc,
+    ).isoformat()
+
+    return {
+        "documentId": document_id,
+        "filename": filename,
+        "savedPath": str(saved_path),
+        "chunkCount": metadata.get("chunkCount"),
+        "namespace": metadata.get("namespace"),
+        "indexName": metadata.get("indexName") or PINECONE_INDEX_NAME,
+        "status": metadata.get("status") or "local",
+        "uploadedAt": uploaded_at,
+        "sizeBytes": metadata.get("sizeBytes") or stat.st_size,
+    }
+
+
+def read_content_metadata(saved_path):
+    metadata_path = get_content_metadata_path(saved_path)
+    if not metadata_path.exists():
+        return {}
+
+    try:
+        return json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        logger.warning("Could not read content metadata from %s", metadata_path)
+        return {}
+
+
+def delete_local_content_files(content_item):
+    saved_path = Path(content_item["savedPath"])
+    metadata_path = get_content_metadata_path(saved_path)
+    for path in (saved_path, metadata_path):
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            logger.warning("Could not delete local content file %s", path)
+
+
 def sanitize_filename(filename):
     stem = Path(filename).stem[:80] or "document"
     suffix = Path(filename).suffix.lower() or ".pdf"
@@ -550,6 +737,19 @@ def upsert_records_to_pinecone(records, namespace):
     for start in range(0, len(records), PINECONE_UPSERT_BATCH_SIZE):
         batch = records[start : start + PINECONE_UPSERT_BATCH_SIZE]
         index.upsert_records(namespace=namespace, records=batch)
+
+
+def delete_document_from_pinecone(document_id, namespace):
+    try:
+        from pinecone import Pinecone
+    except ImportError as error:
+        raise RuntimeError(
+            "Pinecone dependency is missing. Install requirements.txt, including pinecone."
+        ) from error
+
+    pc = Pinecone(api_key=PINECONE_API_KEY)
+    index = pc.Index(PINECONE_INDEX_NAME)
+    index.delete(namespace=namespace, filter={"document_id": {"$eq": document_id}})
 
 
 def ensure_pinecone_index(pc):
@@ -916,7 +1116,17 @@ async def websocket_endpoint(websocket: WebSocket):
                     except json.JSONDecodeError:
                         pass
 
-                    await text_input_queue.put(text)
+                    user_text = safegaurd.extract_text(text)
+                    validation = safegaurd.validate_text(user_text)
+                    if not validation["allowed"]:
+                        logger.info("Blocked non-education Gemini prompt: %s", user_text)
+                        await websocket.send_json({
+                            "type": "error",
+                            "error": validation["message"],
+                        })
+                        continue
+
+                    await text_input_queue.put(user_text)
         except WebSocketDisconnect:
             logger.info("WebSocket disconnected")
         except Exception as e:
