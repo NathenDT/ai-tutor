@@ -1,31 +1,20 @@
 const toggle = document.getElementById("darkToggle");
+const body = document.body;
 
-// Load saved preference
-if (localStorage.getItem("darkMode") === "true") {
-    document.body.style.backgroundColor = "#1a1a1a";
-    document.body.style.color = "#f0f0f0";
-    toggle.checked = true;
+function applyDarkMode(enabled) {
+    body.classList.toggle("dark-mode", enabled);
+    if (toggle) {
+        toggle.checked = enabled;
+    }
 }
 
-// Toggle on click
-toggle.addEventListener("change", () => {
-    if (toggle.checked) {
-        document.body.style.backgroundColor = "#1a1a1a";
-        document.body.style.color = "#f0f0f0";
-        localStorage.setItem("darkMode", "true");
+const darkModeEnabled = localStorage.getItem("darkMode") === "true";
+applyDarkMode(darkModeEnabled);
 
-        var container = document.querySelector(".container");
-        if (container) {
-            container.style.backgroundColor = "#1a1a1a";
-        }
-    } else {
-        document.body.style.backgroundColor = "";
-        document.body.style.color = "";
-        localStorage.setItem("darkMode", "false");
-
-        var container = document.querySelector(".container");
-        if (container) {
-            container.style.backgroundColor = "";
-        }
-    }
-});
+if (toggle) {
+    toggle.addEventListener("change", () => {
+        const enabled = toggle.checked;
+        localStorage.setItem("darkMode", enabled ? "true" : "false");
+        applyDarkMode(enabled);
+    });
+}

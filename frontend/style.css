@@ -215,9 +215,19 @@ header {
   color: #1e8e3e;
 }
 
+.status.connecting {
+  background-color: #fff4e5;
+  color: #bb6b0d;
+}
+
 .status.error {
   background-color: #fce8e6;
   color: #d93025;
+}
+
+.status-indicator.connecting {
+  color: #bb6b0d;
+  font-weight: 700;
 }
 
 .auth-section {
@@ -443,6 +453,7 @@ video {
 input[type="text"],
 input[type="password"],
 input[type="email"],
+input[type="tel"],
 input[type="file"] {
   flex: 1;
   padding: 0.75rem;
@@ -1023,7 +1034,8 @@ video {
 }
 
 input[type="text"],
-input[type="password"] {
+input[type="password"],
+input[type="tel"] {
   flex: 1;
   padding: 0.75rem;
   border: 1px solid #ddd;
@@ -1205,33 +1217,91 @@ input[type="password"] {
   }
   20%, 24%, 55% {
     opacity: 0.8;
-
-body.dark {
-    --bg-color: #1a1a1a;
-    --text-primary: #f0f0f0;
-    --surface-color: #2a2a2a;
-    --border-color: #444;
-}
-
-body.dark header,
-body.dark footer,
-body.dark nav {
-    background-color: #2a2a2a;
-    border-color: #444;
-}
-
-body.dark .use-case-card {
-    background-color: #2a2a2a;
-    border-color: #444;
-}
-
-body.dark input {
-    background-color: #333;
-    color: #f0f0f0;
-    border-color: #555;
-}
-
   }
+}
+
+body.dark-mode {
+  background-color: #121212;
+  color: #e8eaed;
+}
+
+body.dark-mode a {
+  color: #8ab4f8;
+}
+
+body.dark-mode .container,
+body.dark-mode .login-card,
+body.dark-mode .dashboard-shell,
+body.dark-mode .upload-shell,
+body.dark-mode .upload-card,
+body.dark-mode .content-card,
+body.dark-mode .auth-section,
+body.dark-mode .curriculum-panel,
+body.dark-mode .session-end-section {
+  background-color: #1e1e1e;
+  border-color: #333;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);
+}
+
+body.dark-mode .dashboard-nav a {
+  color: #cbd5e1;
+}
+
+body.dark-mode .dashboard-nav a:hover,
+body.dark-mode .dashboard-nav a[aria-current="page"] {
+  color: #e8eaed;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode label,
+body.dark-mode input,
+body.dark-mode textarea,
+body.dark-mode select,
+body.dark-mode p,
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode .eyebrow,
+body.dark-mode .note,
+body.dark-mode .content-empty,
+body.dark-mode .upload-status,
+body.dark-mode .content-item,
+body.dark-mode .content-result {
+  color: #e8eaed;
+}
+
+body.dark-mode input[type="text"],
+body.dark-mode input[type="password"],
+body.dark-mode input[type="email"],
+body.dark-mode input[type="tel"],
+body.dark-mode input[type="file"] {
+  background: #262626;
+  border-color: #444;
+  color: #e8eaed;
+}
+
+body.dark-mode .btn.secondary,
+body.dark-mode .link-btn {
+  background-color: #262626;
+  color: #e8eaed;
+  border-color: #444;
+}
+
+body.dark-mode .btn {
+  box-shadow: none;
+}
+
+body.dark-mode .description-box {
+  background: #242424;
+}
+
+body.dark-mode .message.gemini {
+  background-color: #2a2a2a;
+}
+
+body.dark-mode .message.user {
+  background-color: #2f66f0;
 }
 
 @media (max-width: 768px) {

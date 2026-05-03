@@ -5,6 +5,8 @@ class MediaHandler {
   constructor() {
     this.audioContext = null;
     this.mediaStream = null;
+    this.audioSourceNode = null;
+    this.audioMuteGain = null;
     this.audioWorkletNode = null;
     this.videoStream = null;
     this.videoInterval = null;
@@ -72,6 +74,8 @@ class MediaHandler {
       this.audioWorkletNode.connect(muteGain);
       muteGain.connect(this.audioContext.destination);
 
+      this.audioSourceNode = source;
+      this.audioMuteGain = muteGain;
       this.isRecording = true;
     } catch (e) {
       console.error("Error starting audio:", e);
@@ -88,6 +92,14 @@ class MediaHandler {
     if (this.audioWorkletNode) {
       this.audioWorkletNode.disconnect();
       this.audioWorkletNode = null;
+    }
+    if (this.audioSourceNode) {
+      this.audioSourceNode.disconnect();
+      this.audioSourceNode = null;
+    }
+    if (this.audioMuteGain) {
+      this.audioMuteGain.disconnect();
+      this.audioMuteGain = null;
     }
   }
 

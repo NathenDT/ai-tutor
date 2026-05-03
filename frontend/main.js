@@ -18,6 +18,8 @@ const connectBtn = document.getElementById("connectBtn");
 const topicInput = document.getElementById("topicInput");
 const canvasUrlInput = document.getElementById("canvasUrl");
 const canvasTokenInput = document.getElementById("canvasToken");
+const pdfStatusSpan = document.getElementById("pdf-status");
+const canvasStatusSpan = document.getElementById("canvas-status");
 const topicError = document.getElementById("topic-error");
 const chatLog = document.getElementById("chat-log");
 const logoutBtn = document.getElementById("logoutBtn");
@@ -35,6 +37,49 @@ let pendingSessionTopic = "";
 let pendingCanvasUrl = "";
 let pendingCanvasToken = "";
 const completedCurriculumSteps = new Set();
+
+function updateConnectionStatus(pdfConnected, canvasConnected) {
+  pdfStatusSpan.textContent = pdfConnected ? "Connected" : "Not connected";
+  pdfStatusSpan.className = pdfConnected ? "status-indicator connected" : "status-indicator disconnected";
+  canvasStatusSpan.textContent = canvasConnected ? "Connected" : "Not connected";
+  canvasStatusSpan.className = canvasConnected ? "status-indicator connected" : "status-indicator disconnected";
+}
+
+function setCanvasConnectionStatus(status) {
+  canvasStatusSpan.textContent = status.text;
+  canvasStatusSpan.className = `status-indicator ${status.className}`;
+}
+
+async function verifyCanvasConnection(canvasUrl, canvasToken) {
+  if (!canvasUrl || !canvasToken) {
+    return false;
+  }
+
+  setCanvasConnectionStatus({
+    text: "Checking...",
+    className: "connecting",
+  });
+
+  try {
+    const response = await fetch("/api/canvas/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ canvas_url: canvasUrl, canvas_token: canvasToken }),
+    });
+    if (!response.ok) {
+      return false;
+    }
+
+    const data = await response.json();
+    return Boolean(data.connected);
+  } catch (error) {
+    console.error("Canvas validation failed:", error);
+    return false;
+  }
+}
+
+updateConnectionStatus(false, false);
+
 
 const mediaHandler = new MediaHandler();
 const geminiClient = new GeminiClient({
@@ -105,6 +150,8 @@ function handleJsonMessage(msg) {
     renderCurriculum(msg.curriculum);
   } else if (msg.type === "tool_call") {
     handleToolCall(msg);
+  } else if (msg.type === "connection_status") {
+    updateConnectionStatus(msg.pdf_connected, msg.canvas_connected);
   } else if (msg.type === "user") {
     if (currentUserMessageDiv) {
       currentUserMessageDiv.textContent += msg.text;
@@ -203,14 +250,6 @@ connectBtn.onclick = async () => {
   const topic = topicInput.value.trim();
   const canvasUrl = canvasUrlInput.value.trim();
   const canvasToken = canvasTokenInput.value.trim();
-  if (!topic) {
-    topicError.textContent = "Enter a topic from your uploaded course content.";
-    topicError.classList.remove("hidden");
-    statusDiv.textContent = "Topic Required";
-    statusDiv.className = "status error";
-    topicInput.focus();
-    return;
-  }
 
   pendingSessionTopic = topic;
   pendingCanvasUrl = canvasUrl;
@@ -218,7 +257,31 @@ connectBtn.onclick = async () => {
   topicError.textContent = "";
   topicError.classList.add("hidden");
   statusDiv.textContent = "Connecting...";
+  statusDiv.className = "status connecting";
   connectBtn.disabled = true;
+
+  const canvasProvided = Boolean(canvasUrl && canvasToken);
+  let canvasConnected = false;
+
+  if (canvasProvided) {
+    canvasConnected = await verifyCanvasConnection(canvasUrl, canvasToken);
+    setCanvasConnectionStatus({
+      text: canvasConnected ? "Connected" : "Not connected",
+      className: canvasConnected ? "connected" : "disconnected",
+    });
+
+    if (!canvasConnected) {
+      statusDiv.textContent = "Canvas validation failed";
+      statusDiv.className = "status error";
+      connectBtn.disabled = false;
+      return;
+    }
+  } else {
+    setCanvasConnectionStatus({
+      text: "Not connected",
+      className: "disconnected",
+    });
+  }
 
   try {
     // Initialize audio context on user gesture
@@ -248,6 +311,9 @@ micBtn.onclick = async () => {
     micBtn.textContent = "Start Mic";
   } else {
     try {
+      if (!geminiClient.isConnected()) {
+        throw new Error("Connect to the tutor before starting the mic.");
+      }
       await mediaHandler.startAudio((data) => {
         if (geminiClient.isConnected()) {
           geminiClient.send(data);
@@ -255,74 +321,78 @@ micBtn.onclick = async () => {
       });
       micBtn.textContent = "Stop Mic";
     } catch (e) {
-      alert("Could not start audio capture");
+      alert(e.message || "Could not start audio capture");
     }
   }
 };
 
-cameraBtn.onclick = async () => {
-  if (cameraBtn.textContent === "Stop Camera") {
-    mediaHandler.stopVideo(videoPreview);
-    cameraBtn.textContent = "Start Camera";
-    screenBtn.textContent = "Share Screen";
-    videoPlaceholder.classList.remove("hidden");
-  } else {
-    // If another stream is active (e.g. Screen), stop it first
-    if (mediaHandler.videoStream) {
-      mediaHandler.stopVideo(videoPreview);
-      screenBtn.textContent = "Share Screen";
-    }
-
-    try {
-      await mediaHandler.startVideo(videoPreview, (base64Data) => {
-        if (geminiClient.isConnected()) {
-          geminiClient.sendImage(base64Data);
-        }
-      });
-      cameraBtn.textContent = "Stop Camera";
-      screenBtn.textContent = "Share Screen";
-      videoPlaceholder.classList.add("hidden");
-    } catch (e) {
-      alert("Could not access camera");
-    }
-  }
-};
-
-screenBtn.onclick = async () => {
-  if (screenBtn.textContent === "Stop Sharing") {
-    mediaHandler.stopVideo(videoPreview);
-    screenBtn.textContent = "Share Screen";
-    cameraBtn.textContent = "Start Camera";
-    videoPlaceholder.classList.remove("hidden");
-  } else {
-    // If another stream is active (e.g. Camera), stop it first
-    if (mediaHandler.videoStream) {
+if (cameraBtn) {
+  cameraBtn.onclick = async () => {
+    if (cameraBtn.textContent === "Stop Camera") {
       mediaHandler.stopVideo(videoPreview);
       cameraBtn.textContent = "Start Camera";
-    }
+      if (screenBtn) screenBtn.textContent = "Share Screen";
+      videoPlaceholder.classList.remove("hidden");
+    } else {
+      // If another stream is active (e.g. Screen), stop it first
+      if (mediaHandler.videoStream) {
+        mediaHandler.stopVideo(videoPreview);
+        if (screenBtn) screenBtn.textContent = "Share Screen";
+      }
 
-    try {
-      await mediaHandler.startScreen(
-        videoPreview,
-        (base64Data) => {
+      try {
+        await mediaHandler.startVideo(videoPreview, (base64Data) => {
           if (geminiClient.isConnected()) {
             geminiClient.sendImage(base64Data);
           }
-        },
-        () => {
-          // onEnded callback (e.g. user stopped sharing from browser)
-          screenBtn.textContent = "Share Screen";
-          videoPlaceholder.classList.remove("hidden");
-        }
-      );
-      screenBtn.textContent = "Stop Sharing";
-      cameraBtn.textContent = "Start Camera";
-      videoPlaceholder.classList.add("hidden");
-    } catch (e) {
-      alert("Could not share screen");
+        });
+        cameraBtn.textContent = "Stop Camera";
+        if (screenBtn) screenBtn.textContent = "Share Screen";
+        videoPlaceholder.classList.add("hidden");
+      } catch (e) {
+        alert(e.message || "Could not access camera");
+      }
     }
-  }
-};
+  };
+}
+
+if (screenBtn) {
+  screenBtn.onclick = async () => {
+    if (screenBtn.textContent === "Stop Sharing") {
+      mediaHandler.stopVideo(videoPreview);
+      screenBtn.textContent = "Share Screen";
+      if (cameraBtn) cameraBtn.textContent = "Start Camera";
+      videoPlaceholder.classList.remove("hidden");
+    } else {
+      // If another stream is active (e.g. Camera), stop it first
+      if (mediaHandler.videoStream) {
+        mediaHandler.stopVideo(videoPreview);
+        if (cameraBtn) cameraBtn.textContent = "Start Camera";
+      }
+
+      try {
+        await mediaHandler.startScreen(
+          videoPreview,
+          (base64Data) => {
+            if (geminiClient.isConnected()) {
+              geminiClient.sendImage(base64Data);
+            }
+          },
+          () => {
+            // onEnded callback (e.g. user stopped sharing from browser)
+            screenBtn.textContent = "Share Screen";
+            videoPlaceholder.classList.remove("hidden");
+          }
+        );
+        screenBtn.textContent = "Stop Sharing";
+        if (cameraBtn) cameraBtn.textContent = "Start Camera";
+        videoPlaceholder.classList.add("hidden");
+      } catch (e) {
+        alert(e.message || "Could not share screen");
+      }
+    }
+  };
+}
 
 sendBtn.onclick = sendText;
 textInput.onkeypress = (e) => {
@@ -348,8 +418,8 @@ function resetUI() {
   videoPlaceholder.classList.remove("hidden");
 
   micBtn.textContent = "Start Mic";
-  cameraBtn.textContent = "Start Camera";
-  screenBtn.textContent = "Share Screen";
+  if (cameraBtn) cameraBtn.textContent = "Start Camera";
+  if (screenBtn) screenBtn.textContent = "Share Screen";
   chatLog.innerHTML = "";
   currentCurriculum = null;
   pendingSessionTopic = "";

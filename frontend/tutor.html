@@ -45,9 +45,10 @@
             </ul>
             <p>
               <em
-                >Note: Enter a topic from your uploaded course content. The
-                tutor will build a short plan, then start questioning you by
-                voice.</em
+                >Note: Topic is optional. Gemini can still connect without a
+                PDF or Canvas token and will ask what you are working on. If
+                uploaded course material or Canvas data is available, it will
+                use that context too.</em
               >
             </p>
           </div>
@@ -78,6 +79,18 @@
               <button id="connectBtn" class="btn">Connect</button>
             </div>
             <p id="topic-error" class="form-error hidden"></p>
+
+            <div class="connection-status" id="connection-status">
+              <p><strong>Connection status</strong></p>
+              <div>
+                <span>Uploaded course material:</span>
+                <span id="pdf-status">Not connected</span>
+              </div>
+              <div>
+                <span>Canvas API:</span>
+                <span id="canvas-status">Not connected</span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -140,5 +153,6 @@
     <script src="/static/media-handler.js"></script>
     <script src="/static/gemini-client.js"></script>
     <script src="/static/main.js"></script>
+    <script src="/static/darkmode.js"></script>
   </body>
 </html>

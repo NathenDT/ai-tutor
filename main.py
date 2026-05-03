@@ -151,6 +151,29 @@ async def upload_content_page(request: Request):
     return FileResponse(BASE_DIR / "frontend" / "upload-content.html")
 
 
+@app.post("/api/canvas/validate")
+async def validate_canvas_api(request: Request):
+    username = get_authenticated_request_user(request)
+    if not username:
+        return JSONResponse({"error": "Authentication required."}, status_code=401)
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse({"error": "Invalid JSON payload."}, status_code=400)
+
+    canvas_url = str(payload.get("canvas_url") or "").strip()
+    canvas_token = str(payload.get("canvas_token") or "").strip()
+    if not canvas_url or not canvas_token:
+        return JSONResponse(
+            {"connected": False, "message": "Canvas URL and API token are required."},
+            status_code=200,
+        )
+
+    connected = await validate_canvas_connection(canvas_url, canvas_token)
+    return {"connected": connected}
+
+
 @app.get("/settings")
 async def settings_page(request: Request):
     if not authenticated_request(request):
@@ -707,6 +730,114 @@ def build_pinecone_records(document_id, filename, username, saved_path, pages):
     return records
 
 
+def strip_html_tags(text):
+    if not isinstance(text, str):
+        return ""
+    return re.sub(r"<[^>]+>", "", text)
+
+
+def build_canvas_assignment_records(username, canvas_assignments):
+    uploaded_at = datetime.now(timezone.utc).isoformat()
+    records = []
+
+    for course_name, assignments in canvas_assignments:
+        for assignment in assignments:
+            assignment_id = assignment.get("id")
+            if assignment_id is None:
+                continue
+
+            text = "\n".join(
+                filter(
+                    None,
+                    [
+                        f"Course: {course_name}",
+                        f"Assignment: {assignment.get('name', 'Unnamed assignment')}",
+                        f"Due: {assignment.get('due_at', 'No due date')}",
+                        f"Points: {assignment.get('points_possible', 'Unknown')}",
+                        strip_html_tags(assignment.get('description', '') or ""),
+                        f"URL: {assignment.get('html_url', '')}",
+                    ],
+                )
+            )
+
+            records.append(
+                {
+                    "_id": (
+                        f"canvas-{assignment.get('course_id')}-{assignment_id}"
+                    ),
+                    PINECONE_TEXT_FIELD: text,
+                    "document_id": f"canvas-{assignment.get('course_id')}",
+                    "username": username,
+                    "filename": course_name,
+                    "course_id": assignment.get('course_id'),
+                    "assignment_id": assignment_id,
+                    "uploaded_at": uploaded_at,
+                    "source": "canvas",
+                }
+            )
+
+    return records
+
+
+async def fetch_canvas_assignments(canvas_url, canvas_token):
+    if not canvas_url or not canvas_token:
+        return []
+
+    try:
+        async def get_json(client, url, params=None):
+            response = await client.get(url, headers=headers, params=params)
+            if response.status_code != 200:
+                return None
+            return response.json()
+
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            headers = {"Authorization": f"Bearer {canvas_token}"}
+            user_response = await client.get(f"{canvas_url}/api/v1/users/self", headers=headers)
+            if user_response.status_code != 200:
+                return []
+
+            courses = await get_json(
+                client,
+                f"{canvas_url}/api/v1/courses",
+                params={"enrollment_state": "active", "per_page": 50},
+            )
+            if not courses:
+                return []
+
+            canvas_data = []
+            for course in courses:
+                course_id = course.get("id")
+                course_name = course.get("name") or f"Course {course_id}"
+                assignments = await get_json(
+                    client,
+                    f"{canvas_url}/api/v1/courses/{course_id}/assignments",
+                    params={"per_page": 100},
+                )
+                if assignments:
+                    for assignment in assignments:
+                        assignment["course_id"] = course_id
+                    canvas_data.append((course_name, assignments))
+
+            return canvas_data
+    except Exception:
+        logger.exception("Error fetching Canvas assignments")
+        return []
+
+
+async def validate_canvas_connection(canvas_url, canvas_token):
+    if not canvas_url or not canvas_token:
+        return False
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            headers = {"Authorization": f"Bearer {canvas_token}"}
+            response = await client.get(f"{canvas_url}/api/v1/users/self", headers=headers)
+            return response.status_code == 200
+    except Exception:
+        logger.exception("Error validating Canvas connection")
+        return False
+
+
 def chunk_text(text):
     words = text.split()
     if not words:
@@ -807,7 +938,7 @@ def search_uploaded_course_passages(
 
     normalized_topic = normalize_extracted_text(topic)
     if not normalized_topic:
-        raise ValueError("A learning topic is required before connecting.")
+        normalized_topic = "assignment"
 
     try:
         from pinecone import Pinecone, SearchQuery
@@ -1031,35 +1162,32 @@ async def websocket_endpoint(websocket: WebSocket):
 
     async def start_course_grounded_curriculum(topic, canvas_url, canvas_token, source):
         canvas_data = ""
+        canvas_connected = False
+        canvas_assignments = []
         if canvas_url and canvas_token:
-            try:
-                async with httpx.AsyncClient() as client:
-                    headers = {"Authorization": f"Bearer {canvas_token}"}
-                    # Validate token
-                    response = await client.get(f"{canvas_url}/api/v1/users/self", headers=headers)
-                    if response.status_code == 200:
-                        user_data = response.json()
-                        canvas_data += f"Canvas User: {user_data.get('name', 'Unknown')}\n"
-                        # Fetch assignments
-                        courses_response = await client.get(f"{canvas_url}/api/v1/courses", headers=headers, params={"enrollment_state": "active"})
-                        if courses_response.status_code == 200:
-                            courses = courses_response.json()
-                            for course in courses[:5]:  # Limit to 5 courses
-                                course_id = course["id"]
-                                assignments_response = await client.get(f"{canvas_url}/api/v1/courses/{course_id}/assignments", headers=headers, params={"per_page": 10})
-                                if assignments_response.status_code == 200:
-                                    assignments = assignments_response.json()
-                                    canvas_data += f"Course: {course['name']}\nAssignments:\n"
-                                    for assignment in assignments:
-                                        canvas_data += f"- {assignment['name']}: Due {assignment.get('due_at', 'No due date')}\n"
-                                else:
-                                    logger.warning(f"Failed to fetch assignments for course {course_id}")
-                        else:
-                            logger.warning("Failed to fetch courses")
-                    else:
-                        logger.warning("Invalid Canvas token")
-            except Exception as e:
-                logger.exception("Error fetching Canvas data")
+            canvas_assignments = await fetch_canvas_assignments(canvas_url, canvas_token)
+            if canvas_assignments:
+                canvas_connected = True
+                canvas_data += "Canvas assignments fetched successfully.\n"
+                for course_name, assignments in canvas_assignments:
+                    canvas_data += f"Course: {course_name}\nAssignments:\n"
+                    for assignment in assignments:
+                        canvas_data += f"- {assignment['name']}: Due {assignment.get('due_at', 'No due date')}\n"
+
+                if PINECONE_API_KEY:
+                    try:
+                        records = build_canvas_assignment_records(username, canvas_assignments)
+                        if records:
+                            await asyncio.to_thread(
+                                upsert_records_to_pinecone,
+                                records,
+                                username,
+                            )
+                    except Exception as error:
+                        logger.exception("Failed to index Canvas assignments to Pinecone")
+                        canvas_data += f"Canvas indexing error: {error}\n"
+            else:
+                canvas_data += "Invalid Canvas token or Canvas URL, or no assignments found.\n"
 
         try:
             course_passages = await asyncio.to_thread(
@@ -1080,45 +1208,59 @@ async def websocket_endpoint(websocket: WebSocket):
             )
             return
 
-        if not course_passages:
-            await websocket.send_json(
-                {
-                    "type": "error",
-                    "error": (
-                        "No relevant uploaded course content was found for that topic. "
-                        "Upload course material first or try a topic from the uploaded PDF."
-                    ),
-                }
-            )
-            return
-
-        try:
-            curriculum = await curriculum_session.maybe_generate(topic, course_passages)
-        except Exception as error:
-            logger.exception("Could not generate tutor curriculum from %s", source)
-            await websocket.send_json(
-                {
-                    "type": "error",
-                    "error": (
-                        "Could not generate the LangChain mini-curriculum: "
-                        f"{type(error).__name__}: {error}"
-                    ),
-                }
-            )
-            return
-
-        if not curriculum:
-            return
-
+        pdf_connected = bool(course_passages)
         await websocket.send_json(
             {
-                "type": "curriculum",
-                "curriculum": curriculum_to_dict(curriculum),
+                "type": "connection_status",
+                "pdf_connected": pdf_connected,
+                "canvas_connected": canvas_connected,
             }
         )
-        hidden_context = curriculum_to_hidden_context(curriculum)
-        if canvas_data:
+
+        if pdf_connected:
+            try:
+                curriculum = await curriculum_session.maybe_generate(topic, course_passages)
+            except Exception as error:
+                logger.exception("Could not generate tutor curriculum from %s", source)
+                await websocket.send_json(
+                    {
+                        "type": "error",
+                        "error": (
+                            "Could not generate the LangChain mini-curriculum: "
+                            f"{type(error).__name__}: {error}"
+                        ),
+                    }
+                )
+                return
+
+            if curriculum:
+                await websocket.send_json(
+                    {
+                        "type": "curriculum",
+                        "curriculum": curriculum_to_dict(curriculum),
+                    }
+                )
+                hidden_context = curriculum_to_hidden_context(curriculum)
+            else:
+                hidden_context = "Hidden tutor session context. Do not mention that this was injected.\n"
+                if topic:
+                    hidden_context += f"Student topic: {topic}\n"
+                hidden_context += (
+                    "No uploaded course material was found. Start by asking the student what assignment or topic they are working on, "
+                    "and use the topic or Canvas details to guide the tutoring session."
+                )
+        else:
+            hidden_context = "Hidden tutor session context. Do not mention that this was injected.\n"
+            if topic:
+                hidden_context += f"Student topic: {topic}\n"
+            hidden_context += (
+                "No uploaded course material was found. Start by asking the student what assignment or topic they are working on, "
+                "and use the topic or Canvas details to guide the tutoring session."
+            )
+
+        if canvas_connected and canvas_data:
             hidden_context += f"\n\nCanvas Data:\n{canvas_data}"
+
         await text_input_queue.put(hidden_context)
 
     async def receive_from_client():
