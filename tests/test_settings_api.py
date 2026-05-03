@@ -627,6 +627,19 @@ class CanvasCoursesApiTest(unittest.TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertIn("Tutor", response.text)
 
+    def test_create_user_page_does_not_redirect_authenticated_user(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            database_path = Path(temp_dir) / "auth.db"
+            with patch.object(main, "AUTH_DATABASE_PATH", database_path), patch.object(
+                main, "AUTH_SESSION_SECRET", "test-session-secret"
+            ):
+                client = self.build_client(database_path)
+
+                response = client.get("/create-user")
+
+                self.assertEqual(response.status_code, 200)
+                self.assertIn("Create user", response.text)
+
     def test_canvas_course_index_requires_pinecone_key(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             database_path = Path(temp_dir) / "auth.db"

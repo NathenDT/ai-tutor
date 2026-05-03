@@ -5,18 +5,6 @@ const confirmPasswordInput = document.getElementById("confirm-password");
 const createUserError = document.getElementById("create-user-error");
 const createUserSubmit = document.getElementById("create-user-submit");
 
-async function redirectIfAuthenticated() {
-  try {
-    const response = await fetch("/auth/me");
-    const result = await response.json();
-    if (result.authenticated) {
-      window.location.href = "/home";
-    }
-  } catch (error) {
-    console.error("Could not check auth state:", error);
-  }
-}
-
 function showCreateUserError(message) {
   createUserError.textContent = message;
   createUserError.classList.remove("hidden");
@@ -40,7 +28,7 @@ createUserForm.addEventListener("submit", async (event) => {
   createUserSubmit.textContent = "Creating...";
 
   try {
-    const response = await fetch("/auth/register", {
+    const response = await fetch("/api/auth/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -66,5 +54,3 @@ createUserForm.addEventListener("submit", async (event) => {
     createUserSubmit.textContent = "Create User";
   }
 });
-
-redirectIfAuthenticated();
