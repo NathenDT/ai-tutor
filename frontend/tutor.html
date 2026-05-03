@@ -9,13 +9,18 @@
   <body>
     <div class="container">
       <header>
-        <h1>AI Tutor</h1>
+        <div>
+        <p>AI Tutor</p>
+        <h1>Tutor</h1>
+        </div>
+        
         <div class="header-actions">
           <div id="status" class="status disconnected">Disconnected</div>
           <nav class="dashboard-nav" aria-label="Main navigation">
             <a href="/home">Home</a>
             <a href="/tutor" aria-current="page">Tutor</a>
             <a href="/upload-content">Upload Content</a>
+            <a href="/store">Store</a>
             <a href="/settings">Settings</a>
           </nav>
         </div>
@@ -54,20 +59,6 @@
           </div>
 
           <div class="topic-start">
-            <label for="canvasUrl">Canvas Base URL (optional)</label>
-            <input
-              type="url"
-              id="canvasUrl"
-              placeholder="e.g. https://yourinstitution.instructure.com"
-              autocomplete="off"
-            />
-            <label for="canvasToken">Canvas API Token (optional)</label>
-            <input
-              type="password"
-              id="canvasToken"
-              placeholder="Enter your Canvas API token"
-              autocomplete="off"
-            />
             <label for="topicInput">What do you want to learn this session?</label>
             <div class="topic-row">
               <input

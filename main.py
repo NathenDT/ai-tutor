@@ -29,6 +29,7 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from coins import CoinService
 from google.genai import types
 from gemini_live import GeminiLive
 from safegaurd import SafeGaurd
@@ -58,6 +59,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     initialize_auth_database()
     streak_service.initialize()
+    coin_service.initialize()
     yield
 
 # Configuration
@@ -77,6 +79,7 @@ AUTH_COOKIE_NAME = "ai_tutor_session"
 AUTH_SESSION_MAX_AGE_SECONDS = 60 * 60 * 12
 PASSWORD_HASH_ITERATIONS = 210_000
 streak_service = StreakService(AUTH_DATABASE_PATH)
+coin_service = CoinService(AUTH_DATABASE_PATH)
 safegaurd = SafeGaurd()
 
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "").strip()
@@ -143,6 +146,12 @@ async def settings(request: Request):
         return RedirectResponse(url="/", status_code=303)
     return FileResponse(BASE_DIR / "frontend" / "settings.html")
 
+@app.get("/store")
+async def storepage(request: Request):
+    if not authenticated_request(request):
+        return RedirectResponse(url="/", status_code=303)
+    return FileResponse(BASE_DIR / "frontend" / "storepage.html")
+
 
 @app.get("/upload-content")
 async def upload_content_page(request: Request):
@@ -172,6 +181,65 @@ async def validate_canvas_api(request: Request):
 
     connected = await validate_canvas_connection(canvas_url, canvas_token)
     return {"connected": connected}
+
+
+@app.get("/api/settings")
+async def get_user_settings(request: Request):
+    initialize_auth_database()
+    username = get_authenticated_request_user(request)
+    if not username:
+        return JSONResponse({"error": "Authentication required."}, status_code=401)
+
+    with get_db_connection() as connection:
+        user_id = connection.execute(
+            "SELECT id FROM users WHERE username = ?", (username,)
+        ).fetchone()
+        if not user_id:
+            return JSONResponse({"error": "User not found."}, status_code=404)
+
+        settings = {}
+        rows = connection.execute(
+            "SELECT key, value FROM user_settings WHERE user_id = ?", (user_id[0],)
+        ).fetchall()
+        for row in rows:
+            settings[row["key"]] = row["value"]
+
+        return {"settings": settings}
+
+
+@app.post("/api/settings")
+async def save_user_settings(request: Request):
+    initialize_auth_database()
+    username = get_authenticated_request_user(request)
+    if not username:
+        return JSONResponse({"error": "Authentication required."}, status_code=401)
+
+    try:
+        payload = await request.json()
+    except json.JSONDecodeError:
+        return JSONResponse({"error": "Invalid JSON payload."}, status_code=400)
+
+    with get_db_connection() as connection:
+        user_id = connection.execute(
+            "SELECT id FROM users WHERE username = ?", (username,)
+        ).fetchone()
+        if not user_id:
+            return JSONResponse({"error": "User not found."}, status_code=404)
+
+        for key, value in payload.items():
+            if value is not None:
+                connection.execute(
+                    "INSERT OR REPLACE INTO user_settings (user_id, key, value) VALUES (?, ?, ?)",
+                    (user_id[0], key, value),
+                )
+            else:
+                connection.execute(
+                    "DELETE FROM user_settings WHERE user_id = ? AND key = ?",
+                    (user_id[0], key),
+                )
+        connection.commit()
+
+    return {"message": "Settings saved successfully."}
 
 
 @app.get("/settings")
@@ -371,6 +439,18 @@ async def get_current_streak(request: Request):
     return streak_service.get_streak(username)
 
 
+@app.get("/api/coins")
+async def get_current_coins(request: Request):
+    username = get_request_username(request)
+    if not username:
+        return JSONResponse({"error": "Not authenticated."}, status_code=401)
+
+    coins = coin_service.get_balance(username)
+    streak = streak_service.get_streak(username)
+    coins["multiplier"] = max(1, int(streak["current_streak"] or 0))
+    return coins
+
+
 @app.post("/auth/login")
 async def auth_login(request: Request):
     initialize_auth_database()
@@ -465,6 +545,17 @@ def initialize_auth_database():
                 username TEXT NOT NULL UNIQUE,
                 password_hash TEXT NOT NULL,
                 created_at INTEGER NOT NULL
+            )
+            """
+        )
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS user_settings (
+                user_id INTEGER NOT NULL,
+                key TEXT NOT NULL,
+                value TEXT,
+                PRIMARY KEY (user_id, key),
+                FOREIGN KEY (user_id) REFERENCES users(id)
             )
             """
         )
@@ -1142,12 +1233,24 @@ async def websocket_endpoint(websocket: WebSocket):
         if normalized_step_order < 1 or normalized_step_order > 5:
             return {"ok": False, "error": "step_order must be between 1 and 5."}
 
+        already_completed = normalized_step_order in completed_curriculum_steps
         completed_curriculum_steps.add(normalized_step_order)
+        coin_award = None
+        if not already_completed:
+            streak = streak_service.get_streak(username)
+            multiplier = max(1, int(streak["current_streak"] or 0))
+            coin_award = coin_service.award_correct_answer(
+                username,
+                multiplier=multiplier,
+            )
+
         return {
             "ok": True,
             "step_order": normalized_step_order,
             "evidence": str(evidence or "").strip(),
             "completed_steps": sorted(completed_curriculum_steps),
+            "coin_award": coin_award,
+            "already_completed": already_completed,
         }
 
     gemini_client = GeminiLive(

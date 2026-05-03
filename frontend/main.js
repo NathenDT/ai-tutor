@@ -16,8 +16,6 @@ const videoPreview = document.getElementById("video-preview");
 const videoPlaceholder = document.getElementById("video-placeholder");
 const connectBtn = document.getElementById("connectBtn");
 const topicInput = document.getElementById("topicInput");
-const canvasUrlInput = document.getElementById("canvasUrl");
-const canvasTokenInput = document.getElementById("canvasToken");
 const pdfStatusSpan = document.getElementById("pdf-status");
 const canvasStatusSpan = document.getElementById("canvas-status");
 const topicError = document.getElementById("topic-error");
@@ -218,6 +216,14 @@ function handleToolCall(msg) {
   if (!Number.isInteger(stepOrder)) return;
 
   markCurriculumStepComplete(stepOrder);
+
+  const coinAward = msg.result?.coin_award;
+  if (coinAward && Number(coinAward.awarded) > 0) {
+    appendMessage(
+      "system",
+      `+${coinAward.awarded} coins (${coinAward.multiplier}x streak multiplier)`
+    );
+  }
 }
 
 function markCurriculumStepComplete(stepOrder) {
@@ -248,17 +254,31 @@ function markCurriculumStepComplete(stepOrder) {
 // Connect Button Handler
 connectBtn.onclick = async () => {
   const topic = topicInput.value.trim();
-  const canvasUrl = canvasUrlInput.value.trim();
-  const canvasToken = canvasTokenInput.value.trim();
 
   pendingSessionTopic = topic;
-  pendingCanvasUrl = canvasUrl;
-  pendingCanvasToken = canvasToken;
   topicError.textContent = "";
   topicError.classList.add("hidden");
   statusDiv.textContent = "Connecting...";
   statusDiv.className = "status connecting";
   connectBtn.disabled = true;
+
+  // Fetch saved Canvas settings
+  let canvasUrl = "";
+  let canvasToken = "";
+  try {
+    const response = await fetch('/api/settings');
+    if (response.ok) {
+      const data = await response.json();
+      const settings = data.settings || {};
+      canvasUrl = settings.canvas_url || "";
+      canvasToken = settings.canvas_token || "";
+    }
+  } catch (error) {
+    console.error('Failed to load settings:', error);
+  }
+
+  pendingCanvasUrl = canvasUrl;
+  pendingCanvasToken = canvasToken;
 
   const canvasProvided = Boolean(canvasUrl && canvasToken);
   let canvasConnected = false;

@@ -14,7 +14,8 @@
         <a href="/home">Home</a>
         <a href="/tutor">Tutor</a>
         <a href="/upload-content">Upload Content</a>
-        <a href="/settings" aria-current="page">Settings</a>
+        <a href="/store">Store</a>
+        <a href="/settings">Settings</a>
         <button id="logoutBtn" class="btn secondary" type="button">Log Out</button>
       </nav>
     </header>
@@ -33,12 +34,29 @@
       <label>Phone Number (Optional)</label>
       <input type="tel" placeholder="phone number" /><br /><br />
 
+      <h2>Canvas Integration</h2>
+      <label for="canvasUrl">Canvas Base URL</label>
+      <input
+        type="url"
+        id="canvasUrl"
+        placeholder="e.g. https://yourinstitution.instructure.com"
+        autocomplete="off"
+      /><br /><br />
+
+      <label for="canvasToken">Canvas API Token</label>
+      <input
+        type="password"
+        id="canvasToken"
+        placeholder="Enter your Canvas API token"
+        autocomplete="off"
+      /><br /><br />
+
       <h2>Preferences</h2>
       <label>Dark Mode</label>
       <input type="checkbox" id="darkToggle" /><br /><br />
 
       <a href="/home" class="btn">Back</a>
-      <a href="/home" class="btn">Save Changes</a>
+      <button id="saveBtn" class="btn">Save Changes</button>
     </main>
 
     <footer>
@@ -49,5 +67,6 @@
     <script src="/static/logout.js"></script>
 
   <script src="/static/darkmode.js"></script>
+  <script src="/static/settings.js"></script>
   </body>
 </html>

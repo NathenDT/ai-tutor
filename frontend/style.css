@@ -365,6 +365,16 @@ video {
   border-radius: 4px;
 }
 
+.message.system {
+  align-self: center;
+  max-width: 100%;
+  background-color: rgba(254, 214, 54, 0.18);
+  color: #8f4e00;
+  border: 1px solid rgba(254, 214, 54, 0.55);
+  border-radius: 999px;
+  font-weight: 700;
+}
+
 .curriculum-panel {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
