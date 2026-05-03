@@ -18,7 +18,7 @@ class TutorCurriculum(BaseModel):
     session_goal: str = Field(min_length=10, max_length=180)
     estimated_minutes: int = Field(ge=2, le=7)
     steps: list[TutorCurriculumStep] = Field(min_length=3, max_length=5)
-    wrap_up: str = Field(min_length=10, max_length=220)
+    wrap_up: str = Field(min_length=10, max_length=400)
 
 
 class CoursePassage(BaseModel):

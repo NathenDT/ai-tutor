@@ -16,6 +16,8 @@ const videoPreview = document.getElementById("video-preview");
 const videoPlaceholder = document.getElementById("video-placeholder");
 const connectBtn = document.getElementById("connectBtn");
 const topicInput = document.getElementById("topicInput");
+const canvasUrlInput = document.getElementById("canvasUrl");
+const canvasTokenInput = document.getElementById("canvasToken");
 const topicError = document.getElementById("topic-error");
 const chatLog = document.getElementById("chat-log");
 const logoutBtn = document.getElementById("logoutBtn");
@@ -30,6 +32,8 @@ let currentUserMessageDiv = null;
 let lastErrorMessage = "";
 let currentCurriculum = null;
 let pendingSessionTopic = "";
+let pendingCanvasUrl = "";
+let pendingCanvasToken = "";
 const completedCurriculumSteps = new Set();
 
 const mediaHandler = new MediaHandler();
@@ -39,7 +43,7 @@ const geminiClient = new GeminiClient({
     statusDiv.className = "status connected";
     authSection.classList.add("hidden");
     appSection.classList.remove("hidden");
-    geminiClient.startSession(pendingSessionTopic);
+    geminiClient.startSession(pendingSessionTopic, pendingCanvasUrl, pendingCanvasToken);
   },
   onMessage: (event) => {
     if (typeof event.data === "string") {
@@ -197,6 +201,8 @@ function markCurriculumStepComplete(stepOrder) {
 // Connect Button Handler
 connectBtn.onclick = async () => {
   const topic = topicInput.value.trim();
+  const canvasUrl = canvasUrlInput.value.trim();
+  const canvasToken = canvasTokenInput.value.trim();
   if (!topic) {
     topicError.textContent = "Enter a topic from your uploaded course content.";
     topicError.classList.remove("hidden");
@@ -207,6 +213,8 @@ connectBtn.onclick = async () => {
   }
 
   pendingSessionTopic = topic;
+  pendingCanvasUrl = canvasUrl;
+  pendingCanvasToken = canvasToken;
   topicError.textContent = "";
   topicError.classList.add("hidden");
   statusDiv.textContent = "Connecting...";

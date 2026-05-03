@@ -41,6 +41,7 @@ from tutor_agent import (
     normalize_course_search_results,
 )
 from twilio_handler import TwilioHandler
+import httpx
 
 # Load environment variables
 BASE_DIR = Path(__file__).resolve().parent
@@ -1028,7 +1029,38 @@ async def websocket_endpoint(websocket: WebSocket):
         },
     )
 
-    async def start_course_grounded_curriculum(topic, source):
+    async def start_course_grounded_curriculum(topic, canvas_url, canvas_token, source):
+        canvas_data = ""
+        if canvas_url and canvas_token:
+            try:
+                async with httpx.AsyncClient() as client:
+                    headers = {"Authorization": f"Bearer {canvas_token}"}
+                    # Validate token
+                    response = await client.get(f"{canvas_url}/api/v1/users/self", headers=headers)
+                    if response.status_code == 200:
+                        user_data = response.json()
+                        canvas_data += f"Canvas User: {user_data.get('name', 'Unknown')}\n"
+                        # Fetch assignments
+                        courses_response = await client.get(f"{canvas_url}/api/v1/courses", headers=headers, params={"enrollment_state": "active"})
+                        if courses_response.status_code == 200:
+                            courses = courses_response.json()
+                            for course in courses[:5]:  # Limit to 5 courses
+                                course_id = course["id"]
+                                assignments_response = await client.get(f"{canvas_url}/api/v1/courses/{course_id}/assignments", headers=headers, params={"per_page": 10})
+                                if assignments_response.status_code == 200:
+                                    assignments = assignments_response.json()
+                                    canvas_data += f"Course: {course['name']}\nAssignments:\n"
+                                    for assignment in assignments:
+                                        canvas_data += f"- {assignment['name']}: Due {assignment.get('due_at', 'No due date')}\n"
+                                else:
+                                    logger.warning(f"Failed to fetch assignments for course {course_id}")
+                        else:
+                            logger.warning("Failed to fetch courses")
+                    else:
+                        logger.warning("Invalid Canvas token")
+            except Exception as e:
+                logger.exception("Error fetching Canvas data")
+
         try:
             course_passages = await asyncio.to_thread(
                 search_uploaded_course_passages,
@@ -1084,7 +1116,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 "curriculum": curriculum_to_dict(curriculum),
             }
         )
-        await text_input_queue.put(curriculum_to_hidden_context(curriculum))
+        hidden_context = curriculum_to_hidden_context(curriculum)
+        if canvas_data:
+            hidden_context += f"\n\nCanvas Data:\n{canvas_data}"
+        await text_input_queue.put(hidden_context)
 
     async def receive_from_client():
         try:
@@ -1108,6 +1143,8 @@ async def websocket_endpoint(websocket: WebSocket):
                         ):
                             await start_course_grounded_curriculum(
                                 str(payload.get("topic") or ""),
+                                str(payload.get("canvas_url") or ""),
+                                str(payload.get("canvas_token") or ""),
                                 source="session_start",
                             )
                             continue

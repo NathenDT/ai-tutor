@@ -16,9 +16,18 @@ class MediaHandler {
   }
 
   async initializeAudio() {
+    if (!window.AudioContext && !window.webkitAudioContext) {
+      throw new Error("This browser does not support audio capture.");
+    }
+
     if (!this.audioContext) {
       this.audioContext = new (window.AudioContext ||
         window.webkitAudioContext)();
+      if (!this.audioContext.audioWorklet) {
+        throw new Error(
+          "Audio worklets are unavailable. Open the app from http://localhost:8001 in a modern browser."
+        );
+      }
       await this.audioContext.audioWorklet.addModule(
         "/static/pcm-processor.js"
       );
@@ -32,7 +41,8 @@ class MediaHandler {
     await this.initializeAudio();
 
     try {
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+      const mediaDevices = this.getMediaDevices();
+      this.mediaStream = await mediaDevices.getUserMedia({
         audio: true,
       });
       const source = this.audioContext.createMediaStreamSource(
@@ -65,7 +75,7 @@ class MediaHandler {
       this.isRecording = true;
     } catch (e) {
       console.error("Error starting audio:", e);
-      throw e;
+      throw this.describeMediaError(e, "microphone");
     }
   }
 
@@ -83,7 +93,8 @@ class MediaHandler {
 
   async startVideo(videoElement, onFrame) {
     try {
-      this.videoStream = await navigator.mediaDevices.getUserMedia({
+      const mediaDevices = this.getMediaDevices();
+      this.videoStream = await mediaDevices.getUserMedia({
         video: true,
       });
       videoElement.srcObject = this.videoStream;
@@ -93,13 +104,17 @@ class MediaHandler {
       }, 1000); // 1 FPS
     } catch (e) {
       console.error("Error starting video:", e);
-      throw e;
+      throw this.describeMediaError(e, "camera");
     }
   }
 
   async startScreen(videoElement, onFrame, onEnded) {
     try {
-      this.videoStream = await navigator.mediaDevices.getDisplayMedia({
+      const mediaDevices = this.getMediaDevices();
+      if (!mediaDevices.getDisplayMedia) {
+        throw new Error("This browser does not support screen sharing.");
+      }
+      this.videoStream = await mediaDevices.getDisplayMedia({
         video: true,
       });
       videoElement.srcObject = this.videoStream;
@@ -115,7 +130,7 @@ class MediaHandler {
       }, 1000); // 1 FPS
     } catch (e) {
       console.error("Error starting screen share:", e);
-      throw e;
+      throw this.describeMediaError(e, "screen");
     }
   }
 
@@ -183,6 +198,53 @@ class MediaHandler {
     if (this.audioContext) {
       this.nextStartTime = this.audioContext.currentTime;
     }
+  }
+
+  getMediaDevices() {
+    if (!window.isSecureContext) {
+      throw new Error(
+        "Camera and microphone need a secure page. Use http://localhost:8001 locally or HTTPS when hosted."
+      );
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error(
+        "This browser does not expose camera or microphone access on this page."
+      );
+    }
+
+    return navigator.mediaDevices;
+  }
+
+  describeMediaError(error, deviceName) {
+    if (error instanceof Error && error.message) {
+      if (
+        !error.name ||
+        error.name === "Error" ||
+        error.message.startsWith("Camera and microphone") ||
+        error.message.startsWith("This browser")
+      ) {
+        return error;
+      }
+    }
+
+    const messages = {
+      NotAllowedError: `The browser blocked ${deviceName} access. Allow it in the site permissions and in system privacy settings.`,
+      PermissionDeniedError: `The browser blocked ${deviceName} access. Allow it in the site permissions and in system privacy settings.`,
+      NotFoundError: `No ${deviceName} was found. Check that one is connected and enabled.`,
+      DevicesNotFoundError: `No ${deviceName} was found. Check that one is connected and enabled.`,
+      NotReadableError: `The ${deviceName} is already in use or the system blocked access to it.`,
+      TrackStartError: `The ${deviceName} is already in use or the system blocked access to it.`,
+      SecurityError: `${deviceName} access is blocked on this page. Use http://localhost:8001 locally or HTTPS when hosted.`,
+      AbortError: `${deviceName} access failed before it could start. Try again after closing other apps using it.`,
+      OverconstrainedError: `The requested ${deviceName} settings are not available on this device.`,
+    };
+
+    return new Error(
+      messages[error.name] ||
+        error.message ||
+        `Could not start ${deviceName} access.`
+    );
   }
 
   // Utils

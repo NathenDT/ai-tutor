@@ -9,3 +9,4 @@ python-multipart
 twilio
 pinecone
 pypdf
+httpx

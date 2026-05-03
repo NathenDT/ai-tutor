@@ -1127,6 +1127,8 @@ input[type="password"] {
 .streak-container {
   display: flex;
   align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .streak-badge {
@@ -1144,6 +1146,20 @@ input[type="password"] {
 .streak-badge:hover {
   transform: scale(1.05);
   box-shadow: 0 6px 16px rgba(255, 179, 77, 0.4);
+}
+
+.coins-badge {
+  background: linear-gradient(135deg, #4fbcff 0%, #4d82ff 100%);
+  box-shadow: 0 4px 12px rgba(77, 130, 255, 0.28);
+}
+
+.coins-badge:hover {
+  box-shadow: 0 6px 16px rgba(77, 130, 255, 0.38);
+}
+
+.coins-badge .streak-label,
+.coins-badge .streak-number {
+  color: rgb(254, 214, 54);
 }
 
 .streak-icon {
