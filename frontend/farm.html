@@ -3,21 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Store Page</title>
+    <title>Home - Minerva</title>
     <link href="/static/css/style.css" rel="stylesheet" />
   </head>
+
   <body class="app-page">
-    <div class="container store-shell">
+    <main class="container dashboard-shell">
       <header>
         <div>
           <p class="eyebrow">Minerva</p>
-          <h1>Store</h1>
+          <h1>Farm</h1>
         </div>
         <div class="header-actions">
-          <nav class="dashboard-nav" aria-label="Store navigation">
+          <nav class="dashboard-nav" aria-label="Main navigation">
             <a href="/home">Home</a>
-            <a href="/store" aria-current="page">Store</a>
-            <a href="/farm">Farm</a>
+            <a href="/store">Store</a>
+            <a href="/farm" aria-current="page">Farm</a>
             <a href="/settings">Settings</a>
           </nav>
           <div class="nav-progress" aria-label="Progress summary">
@@ -35,31 +36,14 @@
         </div>
       </header>
 
-      <main>
-        <section class="store-card" aria-labelledby="store-title">
-          <p class="eyebrow">Rewards</p>
-          <div class="store-heading">
-            <div>
-              <h2 id="store-title">Animal Emoji Shop</h2>
-              <p>Spend your coins on collectible study companions.</p>
-            </div>
-            <div class="store-balance" aria-live="polite">
-              <span>Coins</span>
-              <strong id="store-balance">0</strong>
-            </div>
-          </div>
-          <p id="store-status" class="store-status" role="status">Loading store...</p>
-          <div id="store-items" class="store-grid"></div>
-        </section>
       <footer class="footer">
-        <p>© 2026 Maxwell Whitmarsh, Brendon Wong, Nathen dela Torre, Jonathan Lee, Brendon Wong</p>
+        <p>
+          © 2026 Maxwell Whitmarsh, Brendon Wong, Nathen dela Torre, Jonathan Lee.
+        </p>
       </footer>
-      </main>
-
-    </div>
+    </main>
 
     <script src="/static/jss/home.js"></script>
-    <script src="/static/jss/store.js"></script>
     <script src="/static/jss/dark-mode.js"></script>
   </body>
 </html>

@@ -47,6 +47,13 @@ async def store_page(request: Request):
     return FileResponse(FRONTEND_DIR / "store-page.html")
 
 
+@router.get("/farm")
+async def farm_page(request: Request):
+    if not authenticated_request(request):
+        return RedirectResponse(url="/", status_code=303)
+    return FileResponse(FRONTEND_DIR / "farm.html")
+
+
 @router.get("/upload-content")
 async def upload_content_page(request: Request):
     if not authenticated_request(request):
