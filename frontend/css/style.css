@@ -1103,25 +1103,35 @@ select:hover {
   gap: 10px;
 }
 
-.store-card {
+.store-card,
+.farm-card {
   background: var(--surface-color);
 }
 
-.store-card p {
+.store-card p,
+.farm-card p {
   max-width: 680px;
   margin: 0;
   color: var(--text-secondary);
 }
 
-.store-heading {
+.store-heading,
+.farm-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
 }
 
-.store-heading h2 {
+.store-heading h2,
+.farm-heading h2 {
   margin-bottom: 6px;
+}
+
+.store-summary {
+  display: grid;
+  justify-items: stretch;
+  gap: 10px;
 }
 
 .store-balance {
@@ -1163,13 +1173,16 @@ select:hover {
   color: var(--text-secondary);
 }
 
-.store-grid {
+.store-grid,
+.farm-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 14px;
 }
 
-.animal-store-item {
+.animal-store-item,
+.farm-animal-card,
+.farm-empty {
   display: grid;
   gap: 10px;
   min-height: 210px;
@@ -1177,6 +1190,18 @@ select:hover {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   background: var(--surface-muted);
+}
+
+.farm-animal-card {
+  align-content: start;
+  border-color: color-mix(in srgb, var(--success-color) 42%, var(--border-color));
+  background: color-mix(in srgb, var(--success-soft) 44%, var(--surface-muted));
+}
+
+.farm-empty {
+  grid-column: 1 / -1;
+  align-content: center;
+  justify-items: start;
 }
 
 .animal-store-item.owned {
@@ -1195,7 +1220,9 @@ select:hover {
   font-size: 2.4rem;
 }
 
-.animal-store-item h3 {
+.animal-store-item h3,
+.farm-animal-card h3,
+.farm-empty h3 {
   margin: 0;
 }
 
@@ -1274,6 +1301,8 @@ select:hover {
   header,
   .app-header,
   .courses-heading,
+  .farm-heading,
+  .store-heading,
   .upload-heading,
   .content-heading,
   .content-item {
@@ -1281,7 +1310,10 @@ select:hover {
   }
 
   .header-actions,
-  .dashboard-nav {
+  .dashboard-nav,
+  .farm-heading,
+  .store-heading,
+  .store-summary {
     width: 100%;
     justify-content: flex-start;
   }

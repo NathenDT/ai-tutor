@@ -4,13 +4,13 @@ from pathlib import Path
 
 
 STORE_ITEMS = [
-    {"id": "cat", "emoji": "🐔", "name": "Study Cat", "price": 5},
-    {"id": "dog", "emoji": "🐷", "name": "Homework Dog", "price": 10},
-    {"id": "fox", "emoji": "🐮", "name": "Clever Fox", "price": 20},
+    {"id": "cat", "emoji": "🐔", "name": "Study Chicken", "price": 5},
+    {"id": "dog", "emoji": "🐷", "name": "Homework Pig", "price": 10},
+    {"id": "fox", "emoji": "🐮", "name": "Clever Cow", "price": 20},
     {"id": "panda", "emoji": "🐼", "name": "Focus Panda", "price": 50},
-    {"id": "owl", "emoji": "🦅", "name": "Wise Owl", "price": 100},
+    {"id": "owl", "emoji": "🦅", "name": "Wise Hawk", "price": 100},
     {"id": "dragon", "emoji": "🐉", "name": "Legend Dragon", "price": 500},
-    {"id": "dragon", "emoji": "🦖", "name": "Legend Dragon", "price": 1000},
+    {"id": "trex", "emoji": "🦖", "name": "King Rex", "price": 1000},
 ]
 
 

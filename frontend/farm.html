@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Home - Minerva</title>
+    <title>Farm - Minerva</title>
     <link href="/static/css/style.css" rel="stylesheet" />
   </head>
 
@@ -36,6 +36,18 @@
         </div>
       </header>
 
+      <section class="farm-card" aria-labelledby="farm-title">
+        <div class="farm-heading">
+          <div>
+            <p class="eyebrow">Your Collection</p>
+            <h2 id="farm-title">Animal Farm</h2>
+            <p>Every animal you unlock in the store will live here.</p>
+          </div>
+        </div>
+        <p id="farm-status" class="store-status" role="status">Loading farm...</p>
+        <div id="farm-animals" class="farm-grid" aria-live="polite"></div>
+      </section>
+
       <footer class="footer">
         <p>
           © 2026 Maxwell Whitmarsh, Brendon Wong, Nathen dela Torre, Jonathan Lee.
@@ -44,6 +56,7 @@
     </main>
 
     <script src="/static/jss/home.js"></script>
+    <script src="/static/jss/farm.js"></script>
     <script src="/static/jss/dark-mode.js"></script>
   </body>
 </html>
